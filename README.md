@@ -2,6 +2,12 @@
 
 A SwiftUI icon component where any icon can smoothly morph into any other.
 
+<p align="center">
+  <img src="demo.gif" width="300" alt="Live demo — icons morphing between plus, close, arrows, chevrons, menu, check and play" />
+</p>
+
+<p align="center"><a href="demo.mov">Full-quality screen recording</a></p>
+
 Every icon is built from the same raw material — exactly three line segments — so any icon can become any other icon by moving twelve coordinates, rotating, or both.
 
 ## The three rules
