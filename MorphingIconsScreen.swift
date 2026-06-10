@@ -601,21 +601,39 @@ struct MorphingIconsScreen: View {
         return Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.easeOut(duration: 0.15)) {
-                playbackSpeed = isSlowMo ? 1 : 0.5
+                switch playbackSpeed {
+                case 1:
+                    playbackSpeed = 0.5
+                case 0.5:
+                    playbackSpeed = 0.25
+                default:
+                    playbackSpeed = 1
+                }
             }
         } label: {
             ZStack {
-                Text(isSlowMo ? "0.5\u{00D7}" : "1\u{00D7}")
+                Text(speedLabel)
                     .font(.openSauceSemibold(size: 12))
                     .foregroundStyle(isSlowMo ? .white : textColor)
-                    .id(isSlowMo)
+                    .id(speedLabel)
                     .transition(.blurReplace)
             }
-            .frame(width: 56, height: 40)
+            .frame(width: 64, height: 40)
             .background(Capsule().fill(isSlowMo ? textColor : .white))
             .overlay(Capsule().strokeBorder(hairlineColor, lineWidth: isSlowMo ? 0 : 1))
         }
         .buttonStyle(PressableButtonStyle())
+    }
+
+    private var speedLabel: String {
+        switch playbackSpeed {
+        case 0.25:
+            return "0.25\u{00D7}"
+        case 0.5:
+            return "0.5\u{00D7}"
+        default:
+            return "1\u{00D7}"
+        }
     }
 
     private var styleHint: String {
