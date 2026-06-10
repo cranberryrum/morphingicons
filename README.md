@@ -41,6 +41,7 @@ The component takes it as a parameter: `MorphingIconView(icon: .check, style: .r
 - **Blur-masked labels.** The icon name swaps with `.blurReplace`, so the change reads as one transformation instead of two overlapping texts.
 - **Staggered entrance.** Grid cells cascade in with a 25 ms stagger on first appear only.
 - **Reduced motion.** With Reduce Motion enabled, morphs become a quick crossfade — opacity survives, movement goes.
+- **Slow-mo toggle.** A 1× / 0.5× pill next to the style switch plays every morph at half speed for frame-by-frame eyeballing — the component takes it as a `speed:` parameter.
 
 ## Usage
 

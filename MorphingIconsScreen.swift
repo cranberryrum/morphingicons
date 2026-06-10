@@ -217,6 +217,8 @@ struct MorphingIconView: View {
     var lineWidth: CGFloat = 10
     var color: Color = .primary
     var style: MorphStyle = .blur
+    /// Playback rate for morph animations: 1 is real time, 0.5 is slow motion.
+    var speed: Double = 1
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -230,13 +232,16 @@ struct MorphingIconView: View {
     @State private var inFlightAnimations = 0
     @State private var morphGeneration = 0
 
-    private let morphSpring = Animation.spring(response: 0.3, dampingFraction: 0.8)
+    private var morphSpring: Animation {
+        .spring(response: 0.3, dampingFraction: 0.8).speed(speed)
+    }
 
-    init(icon: MorphIcon, lineWidth: CGFloat = 10, color: Color = .primary, style: MorphStyle = .blur) {
+    init(icon: MorphIcon, lineWidth: CGFloat = 10, color: Color = .primary, style: MorphStyle = .blur, speed: Double = 1) {
         self.icon = icon
         self.lineWidth = lineWidth
         self.color = color
         self.style = style
+        self.speed = speed
         _current = State(initialValue: icon)
         _lines = State(initialValue: icon.bakedLines)
         _opacities = State(initialValue: icon.bakedLines.map { style == .raw || !$0.isCollapsed ? 1 : 0 })
@@ -259,7 +264,7 @@ struct MorphingIconView: View {
         .phaseAnimator([0.0, 1.0], trigger: morphPulse) { content, phase in
             content.blur(radius: phase * lineWidth * 0.6)
         } animation: { phase in
-            phase > 0 ? .easeOut(duration: 0.1) : .easeOut(duration: 0.28)
+            (phase > 0 ? Animation.easeOut(duration: 0.1) : .easeOut(duration: 0.28)).speed(speed)
         }
         .aspectRatio(1, contentMode: .fit)
         .onChange(of: icon) { _, newIcon in
@@ -337,7 +342,7 @@ struct MorphingIconView: View {
     }
 
     private func crossfade(to target: MorphIcon, generation: Int) {
-        withAnimation(.easeOut(duration: 0.1), completionCriteria: .logicallyComplete) {
+        withAnimation(.easeOut(duration: 0.1).speed(speed), completionCriteria: .logicallyComplete) {
             wholeOpacity = 0
         } completion: {
             guard generation == morphGeneration else { return }
@@ -348,7 +353,7 @@ struct MorphingIconView: View {
                 opacities = resolvedOpacities(for: target.bakedLines)
                 frameRotation = 0
             }
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: 0.15).speed(speed)) {
                 wholeOpacity = 1
             }
         }
@@ -395,6 +400,7 @@ struct MorphingIconsScreen: View {
 
     @State private var selected: MorphIcon = .plus
     @State private var morphStyle: MorphStyle = .blur
+    @State private var playbackSpeed: Double = 1
     @State private var hasAppeared = false
 
     @Namespace private var styleNamespace
@@ -430,7 +436,7 @@ struct MorphingIconsScreen: View {
 
     private var previewCard: some View {
         VStack(spacing: 20) {
-            MorphingIconView(icon: selected, lineWidth: 11, color: textColor, style: morphStyle)
+            MorphingIconView(icon: selected, lineWidth: 11, color: textColor, style: morphStyle, speed: playbackSpeed)
                 .frame(width: 150, height: 150)
                 .padding(.top, 40)
 
@@ -453,7 +459,7 @@ struct MorphingIconsScreen: View {
                         .transition(.blurReplace)
                 }
             }
-            .animation(.easeOut(duration: 0.18), value: selected.id)
+            .animation(.easeOut(duration: 0.18).speed(playbackSpeed), value: selected.id)
             .padding(.bottom, 32)
         }
         .frame(maxWidth: .infinity)
@@ -529,14 +535,18 @@ struct MorphingIconsScreen: View {
 
     private var styleSwitcher: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 4) {
-                ForEach(MorphStyle.allCases) { style in
-                    styleSegment(style)
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    ForEach(MorphStyle.allCases) { style in
+                        styleSegment(style)
+                    }
                 }
+                .padding(4)
+                .background(Capsule().fill(hairlineColor.opacity(0.55)))
+                .frame(maxWidth: 280)
+
+                speedButton
             }
-            .padding(4)
-            .background(Capsule().fill(hairlineColor.opacity(0.55)))
-            .frame(maxWidth: 280)
 
             ZStack {
                 Text(styleHint)
@@ -573,6 +583,29 @@ struct MorphingIconsScreen: View {
                             .matchedGeometryEffect(id: "morph-style-selection", in: styleNamespace)
                     }
                 }
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+
+    private var speedButton: some View {
+        let isSlowMo = playbackSpeed != 1
+
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.easeOut(duration: 0.15)) {
+                playbackSpeed = isSlowMo ? 1 : 0.5
+            }
+        } label: {
+            ZStack {
+                Text(isSlowMo ? "0.5\u{00D7}" : "1\u{00D7}")
+                    .font(.openSauceSemibold(size: 12))
+                    .foregroundStyle(isSlowMo ? .white : textColor)
+                    .id(isSlowMo)
+                    .transition(.blurReplace)
+            }
+            .frame(width: 56, height: 40)
+            .background(Capsule().fill(isSlowMo ? textColor : .white))
+            .overlay(Capsule().strokeBorder(hairlineColor, lineWidth: isSlowMo ? 0 : 1))
         }
         .buttonStyle(PressableButtonStyle())
     }
