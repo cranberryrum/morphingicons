@@ -22,6 +22,16 @@ Plus · Close · Minus · Menu · Check · Play · Arrow up/right/down/left · C
 
 All twelve are interchangeable. Line orderings are chosen so the classic pairs look right: menu → close does the hamburger-to-X (outer bars become the diagonals, middle bar collapses), plus → minus shrinks the vertical bar, arrow → chevron grows or collapses the shaft from center.
 
+## Three morph styles
+
+A sliding segmented switch under the grid toggles how the morph treats non-geometry:
+
+- **Blur** — a blur pulse masks the morph; collapsed lines fade out
+- **Fade** — collapsed lines fade out, no blur
+- **Raw** — pure geometry, nothing hidden: collapsed lines visibly shrink to round-cap dots at the center
+
+The component takes it as a parameter: `MorphingIconView(icon: .check, style: .raw)`.
+
 ## Interaction details
 
 - **Spring-driven and interruptible.** Morphs use a spring (`response: 0.3, dampingFraction: 0.8`) so they retarget continuously when interrupted mid-animation.

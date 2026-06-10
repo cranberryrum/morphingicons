@@ -194,6 +194,19 @@ private struct LineSegmentShape: Shape {
 
 // MARK: - Morphing icon component
 
+/// How a morph treats the lines that aren't pure geometry.
+enum MorphStyle: String, CaseIterable, Identifiable {
+    /// Blur pulse masks the morph; collapsed lines fade out.
+    case blur = "Blur"
+    /// Collapsed lines fade out, no blur.
+    case fade = "Fade"
+    /// Pure geometry — nothing fades, collapsed lines stay visible
+    /// as round-cap dots at the center.
+    case raw = "Raw"
+
+    var id: String { rawValue }
+}
+
 /// Renders a `MorphIcon` and smoothly morphs whenever `icon` changes.
 ///
 /// Same-family targets (arrows, chevrons, plus/close) rotate along the
@@ -203,6 +216,7 @@ struct MorphingIconView: View {
     let icon: MorphIcon
     var lineWidth: CGFloat = 10
     var color: Color = .primary
+    var style: MorphStyle = .blur
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -218,13 +232,14 @@ struct MorphingIconView: View {
 
     private let morphSpring = Animation.spring(response: 0.3, dampingFraction: 0.8)
 
-    init(icon: MorphIcon, lineWidth: CGFloat = 10, color: Color = .primary) {
+    init(icon: MorphIcon, lineWidth: CGFloat = 10, color: Color = .primary, style: MorphStyle = .blur) {
         self.icon = icon
         self.lineWidth = lineWidth
         self.color = color
+        self.style = style
         _current = State(initialValue: icon)
         _lines = State(initialValue: icon.bakedLines)
-        _opacities = State(initialValue: icon.bakedLines.map { $0.isCollapsed ? 0 : 1 })
+        _opacities = State(initialValue: icon.bakedLines.map { style == .raw || !$0.isCollapsed ? 1 : 0 })
         _frameRotation = State(initialValue: 0)
     }
 
@@ -250,6 +265,11 @@ struct MorphingIconView: View {
         .onChange(of: icon) { _, newIcon in
             morph(to: newIcon)
         }
+        .onChange(of: style) { _, _ in
+            withAnimation(.easeOut(duration: 0.2)) {
+                opacities = resolvedOpacities(for: lines)
+            }
+        }
     }
 
     private func morph(to target: MorphIcon) {
@@ -266,7 +286,9 @@ struct MorphingIconView: View {
             return
         }
 
-        morphPulse += 1
+        if style == .blur {
+            morphPulse += 1
+        }
 
         // Rotation only works from a settled state: re-expressing the current
         // geometry as base-lines-plus-rotation is a snap, which is invisible
@@ -284,7 +306,7 @@ struct MorphingIconView: View {
             snap.disablesAnimations = true
             withTransaction(snap) {
                 lines = source.lines
-                opacities = source.lines.map { $0.isCollapsed ? 0 : 1 }
+                opacities = resolvedOpacities(for: source.lines)
                 frameRotation += shortestDelta(from: frameRotation, to: source.rotationDegrees)
             }
 
@@ -307,7 +329,7 @@ struct MorphingIconView: View {
             inFlightAnimations += 1
             withAnimation(morphSpring, completionCriteria: .logicallyComplete) {
                 lines = targetLines
-                opacities = target.lines.map { $0.isCollapsed ? 0 : 1 }
+                opacities = resolvedOpacities(for: target.lines)
             } completion: {
                 inFlightAnimations -= 1
             }
@@ -323,13 +345,17 @@ struct MorphingIconView: View {
             snap.disablesAnimations = true
             withTransaction(snap) {
                 lines = target.bakedLines
-                opacities = target.bakedLines.map { $0.isCollapsed ? 0 : 1 }
+                opacities = resolvedOpacities(for: target.bakedLines)
                 frameRotation = 0
             }
             withAnimation(.easeOut(duration: 0.15)) {
                 wholeOpacity = 1
             }
         }
+    }
+
+    private func resolvedOpacities(for targetLines: [IconLine]) -> [Double] {
+        targetLines.map { style == .raw || !$0.isCollapsed ? 1 : 0 }
     }
 
     private func shortestDelta(from: Double, to: Double) -> Double {
@@ -368,7 +394,10 @@ struct MorphingIconsScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var selected: MorphIcon = .plus
+    @State private var morphStyle: MorphStyle = .blur
     @State private var hasAppeared = false
+
+    @Namespace private var styleNamespace
 
     private let backgroundColor = Color(red: 245 / 255, green: 245 / 255, blue: 245 / 255)
     private let textColor = Color(red: 15 / 255, green: 15 / 255, blue: 15 / 255)
@@ -386,6 +415,11 @@ struct MorphingIconsScreen: View {
                 previewCard
 
                 iconGrid
+
+                styleSwitcher
+                    .opacity(hasAppeared ? 1 : 0)
+                    .offset(y: hasAppeared || reduceMotion ? 0 : 10)
+                    .animation(.easeOut(duration: 0.24).delay(0.3), value: hasAppeared)
             }
             .padding(20)
         }
@@ -396,7 +430,7 @@ struct MorphingIconsScreen: View {
 
     private var previewCard: some View {
         VStack(spacing: 20) {
-            MorphingIconView(icon: selected, lineWidth: 11, color: textColor)
+            MorphingIconView(icon: selected, lineWidth: 11, color: textColor, style: morphStyle)
                 .frame(width: 150, height: 150)
                 .padding(.top, 40)
 
@@ -491,6 +525,67 @@ struct MorphingIconsScreen: View {
         }
         .buttonStyle(PressableButtonStyle())
         .animation(.easeOut(duration: 0.15), value: isSelected)
+    }
+
+    private var styleSwitcher: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 4) {
+                ForEach(MorphStyle.allCases) { style in
+                    styleSegment(style)
+                }
+            }
+            .padding(4)
+            .background(Capsule().fill(hairlineColor.opacity(0.55)))
+            .frame(maxWidth: 280)
+
+            ZStack {
+                Text(styleHint)
+                    .font(.openSauceRegular(size: 11))
+                    .foregroundStyle(secondaryTextColor)
+                    .id(styleHint)
+                    .transition(.blurReplace)
+            }
+            .animation(.easeOut(duration: 0.18), value: morphStyle)
+        }
+        .padding(.top, 4)
+    }
+
+    private func styleSegment(_ style: MorphStyle) -> some View {
+        let isOn = style == morphStyle
+
+        return Button {
+            guard !isOn else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                morphStyle = style
+            }
+        } label: {
+            Text(style.rawValue)
+                .font(.openSauceSemibold(size: 12))
+                .foregroundStyle(isOn ? textColor : secondaryTextColor)
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
+                .background {
+                    if isOn {
+                        Capsule()
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.08), radius: 4, y: 1)
+                            .matchedGeometryEffect(id: "morph-style-selection", in: styleNamespace)
+                    }
+                }
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+
+    private var styleHint: String {
+        switch morphStyle {
+        case .blur:
+            return "blur masks the morph"
+        case .fade:
+            return "collapsed lines fade out"
+        case .raw:
+            return "pure geometry \u{2014} nothing hidden"
+        }
     }
 
     private func select(_ icon: MorphIcon) {
