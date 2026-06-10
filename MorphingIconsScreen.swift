@@ -212,6 +212,7 @@ struct MorphingIconView: View {
     @State private var frameRotation: Double
     @State private var current: MorphIcon
     @State private var wholeOpacity: Double = 1
+    @State private var morphPulse = 0
     @State private var inFlightAnimations = 0
     @State private var morphGeneration = 0
 
@@ -237,6 +238,14 @@ struct MorphingIconView: View {
         }
         .rotationEffect(.degrees(frameRotation))
         .opacity(wholeOpacity)
+        // A soft blur pulse masks the lines moving and fading during a
+        // morph, so the change reads as one transformation. In fast, then
+        // dissolving out as the spring settles.
+        .phaseAnimator([0.0, 1.0], trigger: morphPulse) { content, phase in
+            content.blur(radius: phase * lineWidth * 0.3)
+        } animation: { phase in
+            phase > 0 ? .easeOut(duration: 0.12) : .easeOut(duration: 0.35)
+        }
         .aspectRatio(1, contentMode: .fit)
         .onChange(of: icon) { _, newIcon in
             morph(to: newIcon)
@@ -256,6 +265,8 @@ struct MorphingIconView: View {
             crossfade(to: target, generation: generation)
             return
         }
+
+        morphPulse += 1
 
         // Rotation only works from a settled state: re-expressing the current
         // geometry as base-lines-plus-rotation is a snap, which is invisible
