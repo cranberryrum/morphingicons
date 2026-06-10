@@ -24,9 +24,9 @@ All twelve are interchangeable. Line orderings are chosen so the classic pairs l
 
 ## Interaction details
 
-- **Spring-driven and interruptible.** Morphs use a spring (`response: 0.4, dampingFraction: 0.82`) so they retarget continuously when interrupted mid-animation.
+- **Spring-driven and interruptible.** Morphs use a spring (`response: 0.3, dampingFraction: 0.8`) so they retarget continuously when interrupted mid-animation.
 - **No jumps under rapid tapping.** Cross-family morphs are expressed in the current rotation frame, and rotation morphs only engage from a settled state — interrupted morphs fall back to coordinate interpolation, which retargets smoothly.
-- **Soft blur pulse.** A subtle blur (0.3 × line width) fades in as a morph begins and dissolves as the spring settles, masking the lines moving and fading so the change reads as one transformation.
+- **Soft blur pulse.** A blur (0.6 × line width) snaps in as a morph begins and dissolves as the spring settles, masking the lines moving and fading so the change reads as one transformation.
 - **Press feedback.** Grid cells scale to 0.96 on press (160 ms ease-out).
 - **Blur-masked labels.** The icon name swaps with `.blurReplace`, so the change reads as one transformation instead of two overlapping texts.
 - **Staggered entrance.** Grid cells cascade in with a 25 ms stagger on first appear only.

@@ -216,7 +216,7 @@ struct MorphingIconView: View {
     @State private var inFlightAnimations = 0
     @State private var morphGeneration = 0
 
-    private let morphSpring = Animation.spring(response: 0.4, dampingFraction: 0.82)
+    private let morphSpring = Animation.spring(response: 0.3, dampingFraction: 0.8)
 
     init(icon: MorphIcon, lineWidth: CGFloat = 10, color: Color = .primary) {
         self.icon = icon
@@ -242,9 +242,9 @@ struct MorphingIconView: View {
         // morph, so the change reads as one transformation. In fast, then
         // dissolving out as the spring settles.
         .phaseAnimator([0.0, 1.0], trigger: morphPulse) { content, phase in
-            content.blur(radius: phase * lineWidth * 0.3)
+            content.blur(radius: phase * lineWidth * 0.6)
         } animation: { phase in
-            phase > 0 ? .easeOut(duration: 0.12) : .easeOut(duration: 0.35)
+            phase > 0 ? .easeOut(duration: 0.1) : .easeOut(duration: 0.28)
         }
         .aspectRatio(1, contentMode: .fit)
         .onChange(of: icon) { _, newIcon in
