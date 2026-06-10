@@ -13,7 +13,7 @@ Every icon is built from the same raw material — exactly three line segments �
 ## The three rules
 
 1. **Exactly three lines.** Every icon is three line segments in a unit square, drawn with round caps.
-2. **Collapse, don't disappear.** Icons that need fewer lines (minus, check, chevrons) park the extras as zero-length segments at the icon's center. Collapsed lines fade out in sync with the shrink, so the round cap never leaves a visible dot.
+2. **Collapse, don't disappear.** Icons that need fewer lines (minus, check, chevrons) park the extras as zero-length segments at a point on one of their visible lines — the check's elbow, the chevron's apex — so the round cap stays covered even when nothing fades.
 3. **Rotate when shapes match.** Icons that share geometry at different rotations — the four arrows, the chevrons, plus → close — belong to a *family* and morph by shortest-arc rotation instead of coordinate interpolation. Arrow right → arrow down turns 90°; it never scrambles endpoints.
 
 ## Icon catalog
@@ -28,7 +28,7 @@ A sliding segmented switch under the grid toggles how the morph treats non-geome
 
 - **Blur** — a blur pulse masks the morph; collapsed lines fade out
 - **Fade** — collapsed lines fade out, no blur
-- **Raw** — pure geometry, nothing hidden: collapsed lines visibly shrink to round-cap dots at the center
+- **Raw** — pure geometry, nothing hidden: collapsed lines visibly shrink down and tuck their round-cap dot under a visible line's stroke (the check's elbow, the chevron's apex), so nothing floats once the morph settles
 
 The component takes it as a parameter: `MorphingIconView(icon: .check, style: .raw)`.
 

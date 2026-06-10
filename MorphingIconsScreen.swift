@@ -7,12 +7,20 @@ struct IconLine: Equatable {
     var start: CGPoint
     var end: CGPoint
 
-    /// A zero-length line hidden at the icon's center. Icons that need fewer
-    /// than three visible lines park their unused lines here.
+    /// A zero-length line parked at the icon's center. Only safe when a
+    /// visible line passes through the center to cover the round cap
+    /// (plus, minus); otherwise use `collapsed(at:)` with a point on a
+    /// visible line so the dot never shows in raw mode.
     static let collapsed = IconLine(
         start: CGPoint(x: 0.5, y: 0.5),
         end: CGPoint(x: 0.5, y: 0.5)
     )
+
+    /// A zero-length line parked at `point`, which must lie on one of the
+    /// icon's visible lines so the round-cap dot stays covered.
+    static func collapsed(at point: CGPoint) -> IconLine {
+        IconLine(start: point, end: point)
+    }
 
     var isCollapsed: Bool {
         hypot(end.x - start.x, end.y - start.y) < 0.0001
@@ -79,7 +87,7 @@ extension MorphIcon {
     private static let chevronLines: [IconLine] = [
         IconLine(start: CGPoint(x: 0.5, y: 0.38), end: CGPoint(x: 0.2, y: 0.62)),
         IconLine(start: CGPoint(x: 0.5, y: 0.38), end: CGPoint(x: 0.8, y: 0.62)),
-        .collapsed
+        .collapsed(at: CGPoint(x: 0.5, y: 0.38))
     ]
 
     static let plus = MorphIcon(
@@ -111,7 +119,7 @@ extension MorphIcon {
     static let check = MorphIcon(
         id: "check", name: "Check", family: nil,
         lines: [
-            .collapsed,
+            .collapsed(at: CGPoint(x: 0.43, y: 0.78)),
             IconLine(start: CGPoint(x: 0.18, y: 0.54), end: CGPoint(x: 0.43, y: 0.78)),
             IconLine(start: CGPoint(x: 0.43, y: 0.78), end: CGPoint(x: 0.84, y: 0.3))
         ],
@@ -200,8 +208,8 @@ enum MorphStyle: String, CaseIterable, Identifiable {
     case blur = "Blur"
     /// Collapsed lines fade out, no blur.
     case fade = "Fade"
-    /// Pure geometry — nothing fades, collapsed lines stay visible
-    /// as round-cap dots at the center.
+    /// Pure geometry — nothing fades; collapsed lines tuck their
+    /// round-cap dot under a visible line's stroke.
     case raw = "Raw"
 
     var id: String { rawValue }
